@@ -3,23 +3,25 @@ import Film from "./Film"
 
 const API_KEY = "53cace5d"
 
-
 export default function FilmList() {
   const [films, setFilms] = React.useState([])
   const [loading, setLoading] = React.useState(true)
   const [input, setInput] = React.useState("")
   const [selection, setSelection] = React.useState("")
 
+  const pagination = React.useRef({query: "", pagination: 0})
+
 
   const get_data = async (initial=false) => {
     setLoading(true)
+    pagination.current.pagination = 0
+    pagination.current.query = initial ? "soul": input
     const endpoint = `http://www.omdbapi.com/?s=${initial ? "soul": input}${selection ? "&type=" + selection : ""}&apikey=` + API_KEY
-    console.log(endpoint)
+    
     let filmResults = [] 
     for (let i = 1; i <= 2; i++) {
       const response = await fetch(endpoint +`&page=${i}`)
       const data = await response.json()
-      console.log(data)
 
       if (data.Response === "False") {
         break
@@ -30,24 +32,41 @@ export default function FilmList() {
         break
       }
     }
-
+    pagination.current.pagination += filmResults.length
     setFilms(filmResults)
     setLoading(false)
   }
 
+  const add_data = async () => {
+    setLoading(true)
+    const next_page = (pagination.current.pagination / 10) + 1;
+
+    const enpoint = `http://www.omdbapi.com/?s=${pagination.current.query}&page=${next_page}&apikey=` + API_KEY
+    const response = await fetch(enpoint)
+    const data = await response.json()
+
+    if (data.Response === "False") {
+      return
+    }
+
+    pagination.current.pagination += data.Search.length
+
+
+    setFilms((prev) => [...prev, ...data.Search])
+    setLoading(false) 
+
+  }
+
   const add_films = () => {
     if ((window.innerHeight + window.pageYOffset) >= document.body.offsetHeight) {
-      //Empty
-      
+      add_data()
     }
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (input !== "") {
-      
       await get_data()
-
     }
   }
 
