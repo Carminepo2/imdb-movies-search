@@ -9,12 +9,12 @@ export default function FilmList() {
   const [input, setInput] = React.useState("")
   const [selection, setSelection] = React.useState("")
 
-  const pagination = React.useRef({query: "", pagination: 0})
+  const pagination = React.useRef({query: "", total: 0, numMovies: 0})
 
 
   const get_data = async (initial=false) => {
     setLoading(true)
-    pagination.current.pagination = 0
+    pagination.current.numMovies = 0
     pagination.current.query = initial ? "soul": input
     const endpoint = `http://www.omdbapi.com/?s=${initial ? "soul": input}${selection ? "&type=" + selection : ""}&apikey=` + API_KEY
     
@@ -22,38 +22,43 @@ export default function FilmList() {
     for (let i = 1; i <= 2; i++) {
       const response = await fetch(endpoint +`&page=${i}`)
       const data = await response.json()
+      console.log(data);
 
       if (data.Response === "False") {
         break
       }
+      const totalResults = parseInt(data.totalResults);
+      pagination.current.total = totalResults;
 
       filmResults = filmResults.concat(data.Search)
-      if (data.totalResults <= 10) {
+      if (totalResults <= 10) {
         break
       }
     }
-    pagination.current.pagination += filmResults.length
+    pagination.current.numMovies += filmResults.length
     setFilms(filmResults)
     setLoading(false)
   }
 
   const add_data = async () => {
-    setLoading(true)
-    const next_page = (pagination.current.pagination / 10) + 1;
+    if (pagination.current.numMovies < pagination.current.total) {
+      setLoading(true)
 
-    const enpoint = `http://www.omdbapi.com/?s=${pagination.current.query}&page=${next_page}&apikey=` + API_KEY
-    const response = await fetch(enpoint)
-    const data = await response.json()
+      pagination.current.numMovies += 10
 
-    if (data.Response === "False") {
-      return
-    }
+      const next_page = (pagination.current.numMovies / 10) + 1;
 
-    pagination.current.pagination += data.Search.length
+      const enpoint = `http://www.omdbapi.com/?s=${pagination.current.query}&page=${next_page}&apikey=` + API_KEY
+      const response = await fetch(enpoint)
+      const data = await response.json()
 
+      if (data.Response === "False") {
+        return
+      }
 
-    setFilms((prev) => [...prev, ...data.Search])
-    setLoading(false) 
+      setFilms((prev) => [...prev, ...data.Search])
+      setLoading(false)
+    } 
 
   }
 
@@ -93,7 +98,7 @@ export default function FilmList() {
       </select>
     </form>
     <div className="mt-10 flex flex-wrap items-center justify-center">
-      {loading && <div className="absolute p-10 bg-white bg-opacity-50 text-3xl">Loading...</div>}
+      {loading && <div className="absolute top-1/2 left-1/2 p-10 bg-white bg-opacity-50 text-5xl rounded-xl z-50">Loading...</div>}
       {!films.length ? <h2 className="text-center text-gray-300 text-6xl font-thin select-none">No Films...</h2> : films.map((film, i) => {
         return (<Film key={film.imdbID + i} imdbID={film.imdbID} title={film.Title} year={film.Year} img={film.Poster} />)
       })}
